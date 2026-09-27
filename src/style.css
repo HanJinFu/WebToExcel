@@ -1,0 +1,22 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: #f5f5f7;
+  color: #1d1d1f;
+}
+
+#app {
+  width: 100%;
+}
+
+/* Element Plus 覆盖 */
+.el-loading-mask {
+  border-radius: 14px;
+}
