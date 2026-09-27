@@ -184,28 +184,21 @@ const loadImages = async (zip: JSZip) => {
 }
 
 const loadRichDataImages = async (zip: JSZip) => {
-  // 读取 richValueRel 关系文件获取图片路径
   const rvrRelsFile = zip.file('xl/richData/_rels/richValueRel.xml.rels')
-  if (!rvrRelsFile) { console.log('[RichData] No richValueRel.xml.rels'); return }
+  if (!rvrRelsFile) return
   const rvrRelsText = await rvrRelsFile.async('string')
   const rvrRelMap = new Map<string, string>()
-  // 用正则解析，避免 DOMParser 命名空间问题
   const relMatches = rvrRelsText.match(/<Relationship\s+Id="([^"]*)"[^>]*Target="([^"]*)"/g) || []
-  console.log('[RichData] relMatches:', relMatches.length, relMatches)
   relMatches.forEach(m => {
     const idMatch = m.match(/Id="([^"]*)"/)
     const targetMatch = m.match(/Target="([^"]*)"/)
     if (idMatch && targetMatch) rvrRelMap.set(idMatch[1], targetMatch[1])
   })
-  console.log('[RichData] rvrRelMap:', Array.from(rvrRelMap.entries()))
 
-  // 读取 sheet1.xml 找到有 vm 属性的单元格
   const sheetFile = zip.file('xl/worksheets/sheet1.xml')
-  if (!sheetFile) { console.log('[RichData] No sheet1.xml'); return }
+  if (!sheetFile) return
   const sheetText = await sheetFile.async('string')
-  // 用正则提取所有有 vm 属性的单元格
   const cellMatches = sheetText.match(/<c\s+r\s*="([^"]*)"[^>]*vm\s*=\s*"([^"]*)"/g) || []
-  console.log('[RichData] cellMatches:', cellMatches)
   let imgId = 1
   for (const match of cellMatches) {
     const cellRefMatch = match.match(/r="([^"]*)"/)
@@ -216,21 +209,18 @@ const loadRichDataImages = async (zip: JSZip) => {
     if (vm === '0') continue
     const relId = `rId${parseInt(vm)}`
     const mediaPath = rvrRelMap.get(relId)
-    console.log(`[RichData] Cell ${cellRef}: relId=${relId}, mediaPath=${mediaPath}`)
     if (!mediaPath) continue
     const resolvedPath = mediaPath.startsWith('../') ? 'xl/' + mediaPath.slice(3) : mediaPath
     const mediaFile = zip.file(resolvedPath) || zip.file(mediaPath)
-    if (!mediaFile) { console.log(`[RichData] File not found: ${resolvedPath}`); continue }
+    if (!mediaFile) continue
     const buffer = await mediaFile.async('uint8array')
     const mimeMatch = resolvedPath.match(/\.([^.\/]+)$/)
     const mime = mimeMatch ? `image/${mimeMatch[1]}` : 'image/png'
     const b64 = btoa(String.fromCharCode(...Array.from(new Uint8Array(buffer))))
     const url = `data:${mime};base64,${b64}`
-    console.log(`[RichData] Loaded image for ${cellRef}: ${buffer.length} bytes, ${mime}`)
     if (!cellImages.value[cellRef]) cellImages.value[cellRef] = []
     cellImages.value[cellRef].push({ cell: cellRef, imageUrl: url, imgId: imgId++ })
   }
-  console.log('[RichData] cellImages keys:', Object.keys(cellImages.value))
 }
 
 // 从 xlsx zip 解析数据（正则版本，避免命名空间问题）
